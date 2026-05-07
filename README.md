@@ -4,12 +4,18 @@ A small, **fully-local** Python pipeline that turns a folder of screenshots
 of a single client's medical document into one structured row in a fresh
 `.xlsx` file.
 
-- **Image → text** with `qwen2.5vl:7b` via local Ollama (images downscaled to
-  ≤1400 px on the long edge before transcription).
+- **Image → text** with **Tesseract OCR** (`heb` + `eng`), run as **two
+  separate single-language passes** per image and concatenated. A single
+  `-l heb+eng` pass produces BiDi-mushed output on lines that mix scripts;
+  two passes give clean Hebrew + clean English transcripts that the
+  downstream model can pick from. Subsecond per page.
 - **Text → structured JSON** with `gemma4:latest` (~9.6 GB) via local Ollama
-  in **server-enforced JSON-schema mode**. The 26 B variant loops on
-  schema-rich prompts; the smaller variant + a strict schema is both faster
-  and more reliable.
+  in **server-enforced JSON-schema mode**, called **once per schema field**
+  (14 calls per fixture, ~2-4 s each). One focused question per field is far
+  more reliable than asking for the whole 14-field object at once — the
+  model isn't juggling competing labels and never silently drops a field.
+  Enum fields (`exposed_to_pigeons`) get a prompt variant that allows
+  semantic inference, since the literal value is not in the transcript.
 - **JSON → .xlsx** with `openpyxl`. List/object fields are stored as JSON
   strings (`ensure_ascii=False`) in a single cell so Hebrew round-trips.
 - **Privacy**: only HTTP target is `localhost:11434`. No telemetry. No cloud SDKs.
@@ -22,29 +28,35 @@ End-to-end per input folder (vision + structured extraction):
 
 | Fixture                     | Pages | Vision | Structured | **Total** |
 |-----------------------------|-------|--------|------------|-----------|
-| `case_01_pigeons_yes`       | 2     | 51.8 s | 11.7 s     | **63.5 s** |
-| `case_02_pigeons_no`        | 1     | 28.1 s |  8.1 s     | **36.2 s** |
-| `case_03_minimal`           | 1     | 26.1 s |  5.6 s     | **31.7 s** |
+| `case_01_pigeons_yes`       | 2     |  1.0 s | 43.4 s     | **44.4 s** |
+| `case_02_pigeons_no`        | 1     |  0.7 s | 35.9 s     | **36.6 s** |
+| `case_03_minimal`           | 1     |  0.7 s | 32.8 s     | **33.5 s** |
 
-A per-folder budget of ≤5 minutes is held with a wide margin. First call after
-Ollama starts is ~30 s slower because models load from disk; `keep_alive: 10m`
-on every request keeps both pinned across consecutive folders.
+A per-folder budget of ≤5 minutes is held with a wide margin. The structured
+stage dominates because it makes one LLM call per schema field; this is the
+bulk of the runtime but also where the quality wins are. `keep_alive: 10m`
+on every request keeps gemma4:latest pinned across fields and across
+consecutive folders.
 
 ---
 
 ## Prerequisites
 
 1. **Python 3.10+**
-2. **Ollama** running locally
+2. **Tesseract** for OCR (no GPU needed)
+   - macOS: `brew install tesseract tesseract-lang` (the lang pack ships ~100
+     scripts including `heb`)
+   - Debian/Ubuntu: `sudo apt install tesseract-ocr tesseract-ocr-heb`
+   - Verify with `tesseract --list-langs | grep -E "heb|eng"`
+3. **Ollama** running locally
    - macOS: `brew install ollama` then `ollama serve` (or open the menubar app)
    - Windows: install from <https://ollama.com/download/windows> and launch the app
-3. **Models pulled**:
+4. **Model pulled**:
    ```
-   ollama pull qwen2.5vl:7b
    ollama pull gemma4:latest
-   # (optional, only used by the LLM-as-judge tests below — same model as
-   #  extraction, so this is the only required pull beyond qwen2.5vl)
    ```
+   The same model is used for both structured extraction and the optional
+   LLM-as-judge tests, so this is the only Ollama pull required.
 
 ## Setup
 

@@ -40,7 +40,7 @@ def require_ollama(ollama_host: str) -> str:
     except requests.RequestException as exc:
         pytest.skip(f"Ollama not reachable at {ollama_host}: {exc}")
     names = {m.get("name") for m in resp.json().get("models", [])}
-    required = {"qwen2.5vl:7b", "gemma4:latest"}
+    required = {"gemma4:latest"}  # vision is Tesseract on this branch
     missing = required - names
     if missing:
         pytest.skip(f"Missing Ollama models: {', '.join(sorted(missing))}")
