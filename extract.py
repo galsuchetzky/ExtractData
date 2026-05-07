@@ -18,7 +18,7 @@ import requests
 
 import pipeline
 
-REQUIRED_MODELS = ("qwen2.5vl:7b", "gemma4:latest")
+REQUIRED_MODELS = ("gemma4:latest",)  # vision is now Tesseract (no Ollama model)
 
 
 def _preflight(host: str) -> None:
