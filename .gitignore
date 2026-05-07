@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+out/
+samples/*/
+!samples/.gitkeep
+.DS_Store
+Thumbs.db
+*.log
+
+# Generated test fixtures
+tests/fixtures/*/
+!tests/fixtures/.gitkeep
+
+# pytest
+.pytest_cache/
+
+# OMC autopilot/agent state
+.omc/

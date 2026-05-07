@@ -1,0 +1,85 @@
+version: 1
+language_hint: "Hebrew + English mixed; doctor visit summary (typed EHR export)"
+
+fields:
+  # --- Identity & visit metadata ---
+  - name: patient_name
+    type: string
+    description: Full name of the patient as written.
+    hebrew_aliases: ["שם המטופל", "שם החולה", "שם"]
+
+  - name: patient_id
+    type: string
+    description: National ID / clinic patient identifier.
+    hebrew_aliases: ["ת.ז.", "תעודת זהות", "מספר מטופל"]
+
+  - name: date_of_birth
+    type: string
+    description: Date of birth as written (no normalization).
+    hebrew_aliases: ["תאריך לידה"]
+
+  - name: visit_date
+    type: string
+    description: Date of the visit/encounter as written.
+    hebrew_aliases: ["תאריך ביקור", "תאריך"]
+
+  - name: doctor_name
+    type: string
+    description: Name of the treating physician.
+    hebrew_aliases: ["שם הרופא", "רופא מטפל"]
+
+  - name: clinic
+    type: string
+    description: Clinic, hospital, or HMO name.
+    hebrew_aliases: ["מרפאה", "קופת חולים"]
+
+  # --- Clinical content ---
+  - name: chief_complaint
+    type: string
+    description: Reason for visit / presenting complaint, free text.
+    hebrew_aliases: ["סיבת הפנייה", "תלונה עיקרית"]
+
+  - name: diagnosis
+    type: list_of_strings
+    description: One string per distinct diagnosis.
+    hebrew_aliases: ["אבחנה", "אבחנות"]
+
+  - name: symptoms
+    type: list_of_strings
+    description: One string per symptom mentioned.
+    hebrew_aliases: ["סימפטומים", "תסמינים"]
+
+  - name: medical_history_summary
+    type: string
+    description: Free-text summary of the patient's relevant medical history.
+    hebrew_aliases: ["רקע רפואי", "היסטוריה רפואית"]
+
+  # --- Treatment ---
+  - name: medications
+    type: list_of_objects
+    description: Drugs prescribed or in use; one object per drug.
+    hebrew_aliases: ["תרופות"]
+    item_schema:
+      name: string
+      dose: string
+      frequency: string
+
+  - name: procedures
+    type: list_of_strings
+    description: Procedures or treatments performed/recommended.
+    hebrew_aliases: ["פרוצדורות", "טיפולים"]
+
+  - name: referrals
+    type: list_of_strings
+    description: Referrals issued to specialists or for tests.
+    hebrew_aliases: ["הפניות"]
+
+  # --- Targeted screening question ---
+  - name: exposed_to_pigeons
+    type: enum
+    values: ["yes", "no", "unknown"]
+    description: |
+      Was the patient exposed to pigeons or birds? Look for explicit mentions
+      of pigeons, doves, birds, coops, or bird-exposure history. If not
+      mentioned at all, return "unknown".
+    hebrew_aliases: ["יונים", "ציפורים", "חשיפה ליונים", "חשיפה לציפורים"]
