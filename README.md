@@ -60,19 +60,45 @@ consecutive folders.
 
 ## Setup
 
-### macOS / Linux
-```bash
-cd /Users/gal.suchetzky/Projects/ExtractData
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+### Windows — automated (recommended)
+
+A bootstrap script ships with the project that installs every prerequisite
+above (Git, Python 3.12, Tesseract with the Hebrew language pack, Ollama),
+pulls `gemma4:latest`, creates the Python venv, installs `requirements.txt`,
+and runs an end-to-end smoke test. It's idempotent and interactive (asks Y/N
+before each install).
+
+```powershell
+cd C:\path\to\ExtractData
+powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
 ```
 
-### Windows (PowerShell)
+Useful flags:
+
+```powershell
+.\setup-windows.ps1 -NonInteractive    # accept every prompt — fully unattended
+.\setup-windows.ps1 -SkipModelPull     # if the model is already pulled
+.\setup-windows.ps1 -SkipSmokeTest     # skip the final LLM smoke test
+```
+
+If you'd rather install the prerequisites yourself first, follow the steps
+in **Prerequisites** above, then use the manual venv setup below.
+
+### Windows — manual (if you skipped the bootstrap script)
+
 ```powershell
 cd C:\path\to\ExtractData
 python -m venv .venv
 .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+### macOS / Linux
+
+```bash
+cd /Users/gal.suchetzky/Projects/Personal/ExtractData
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
