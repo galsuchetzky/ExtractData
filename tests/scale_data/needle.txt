@@ -1,0 +1,35 @@
+מכבי שירותי בריאות - סניף הרצליה
+דו"ח מפגש רפואי / Medical Encounter Report
+
+שם המטופל / Patient name: ישראל ישראלי
+ת.ז. / Patient ID: 311234567
+תאריך לידה / DOB: 15/03/1962
+תאריך ביקור / Visit date: 07/05/2026
+שם הרופא / Physician: ד"ר רותם כהן
+
+סיבת הפנייה / Chief Complaint:
+שיעול יבש מתמשך כשלושה שבועות, עם החמרה לאחרונה.
+
+רקע רפואי / Medical History:
+המטופל בריא בדרך כלל. ללא רקע של אסטמה. לא מעשן.
+
+תסמינים / Symptoms:
+- שיעול יבש
+- קוצר נשימה במאמץ
+- עייפות
+
+חשיפות סביבתיות / Environmental Exposures:
+המטופל מחזיק מגדל יונים בגג הבית מעל 10 שנים, חשיפה יומיומית.
+
+אבחנה / Diagnosis:
+Hypersensitivity Pneumonitis - Bird Fancier's Lung suspected.
+
+תרופות / Medications:
+- Prednisone 40mg, פעם ביום
+- Ventolin 100mcg, לפי הצורך
+
+פרוצדורות / Procedures:
+- צילום חזה
+- CT חזה ברזולוציה גבוהה (HRCT)
+
+הפניות / Referrals: מרפאת ריאות.
