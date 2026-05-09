@@ -18,3 +18,8 @@ tests/fixtures/*/
 
 # OMC autopilot/agent state
 .omc/
+
+# Scratch and debug files
+scratch/
+debug_ocr*.txt
+*.xlsx

@@ -41,6 +41,8 @@ def _value_type_schema(field: Field) -> dict[str, Any]:
         "integer": {"type": ["integer", "null"]},
         "number": {"type": ["number", "null"]},
         "boolean": {"type": ["boolean", "null"]},
+        "date": {"type": ["string", "null"]},
+        "float": {"type": ["number", "null"]},
     }
     if field.type in type_map:
         return type_map[field.type]
@@ -95,6 +97,8 @@ _TYPE_PHRASE = {
     "number": "a number (or null)",
     "boolean": "a boolean (or null)",
     "enum": "exactly one of the allowed enum values",
+    "date": "a string (usually YYYY-MM-DD)",
+    "float": "a number",
     "list_of_strings": "an array of strings (use [] if none)",
     "list_of_objects": "an array of objects (use [] if none)",
 }
@@ -120,7 +124,7 @@ def _build_prompt(field: Field, transcript: str) -> str:
         rules = (
             "  - Copy the value verbatim from the transcript when present.\n"
             "  - Do NOT invent values that are not in the transcript.\n"
-            "  - Use null / [] when the field is absent.\n"
+            "  - Use null / [] when the field is absent (it will be filled with a default 'NA' later).\n"
         )
     return (
         f"Extract ONLY the field '{field.name}' from the medical-record "
@@ -171,6 +175,8 @@ def _try_parse(text: str) -> dict[str, Any] | None:
 
 
 def _default_for(field: Field) -> Any:
+    if field.default is not None:
+        return field.default
     return [] if field.type in LIST_TYPES else None
 
 
@@ -185,7 +191,14 @@ def _extract_one(
     parsed = _try_parse(raw)
     if not parsed or "value" not in parsed:
         return _default_for(field), f"unparseable response: {raw[:200]!r}"
-    return parsed["value"], None
+    
+    val = parsed["value"]
+    # If the model explicitly returned null or empty list, but we have a default, use it
+    if val is None or val == []:
+        if field.default is not None:
+            return field.default, None
+            
+    return val, None
 
 
 # ---------------------------------------------------------------------- public API

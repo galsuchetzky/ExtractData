@@ -20,6 +20,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from bidi.algorithm import get_display
+import re
+
 log = logging.getLogger(__name__)
 
 TESSERACT_BIN = "tesseract"
@@ -80,6 +83,38 @@ def _run(path: Path, lang: str) -> str:
             return f.read().strip()
 
 
+def _maybe_fix_bidi(text: str) -> str:
+    """Heuristic: if Hebrew final letters appear mostly at word starts, it's reversed.
+    
+    This handles documents that are stored in 'Visual Hebrew' (already reversed in the image)
+    vs 'Logical Hebrew' (characters in correct order in the image).
+    """
+    if not text:
+        return text
+
+    # Final letters: ם, ן, ץ, ף, ך
+    final_letters = {'ם', 'ן', 'ץ', 'ף', 'ך'}
+    starts = 0
+    ends = 0
+
+    # Extract all Hebrew sequences
+    words = re.findall(r'[א-ת]+', text)
+    for word in words:
+        if not word:
+            continue
+        if word[0] in final_letters:
+            starts += 1
+        if word[-1] in final_letters:
+            ends += 1
+
+    # If we see final letters at starts but not at ends, it's a strong signal of reversal
+    if starts > ends:
+        log.debug("Detected reversed Hebrew (starts=%d, ends=%d), applying BiDi correction", starts, ends)
+        return get_display(text)
+
+    return text
+
+
 def transcribe_image(path: Path, host: str) -> str:  # `host` kept for compat
     """Run Tesseract with mixed Hebrew+English support.
 
@@ -89,4 +124,5 @@ def transcribe_image(path: Path, host: str) -> str:  # `host` kept for compat
     """
     _ensure_tesseract()
     log.debug("Tesseract OCR: %s (%d bytes)", path.name, path.stat().st_size)
-    return _run(path, "heb+eng")
+    raw_text = _run(path, "heb+eng")
+    return _maybe_fix_bidi(raw_text)

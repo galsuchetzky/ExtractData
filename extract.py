@@ -84,9 +84,12 @@ def main() -> None:
         type=Path,
         help="Folder containing all images for ONE client/document",
     )
-    parser.add_argument("schema", type=Path, help="Path to schema.yaml")
+    parser.add_argument("schema", type=Path, nargs="?", help="Path to schema.yaml")
     parser.add_argument(
-        "out_xlsx", type=Path, help="Output .xlsx path (will be overwritten)"
+        "out_xlsx",
+        type=Path,
+        nargs="?",
+        help="Output .xlsx path (will be overwritten)",
     )
     config = load_config()
 
@@ -109,6 +112,11 @@ def main() -> None:
         default=None,
         help="Also write the concatenated raw transcript to this path",
     )
+    parser.add_argument(
+        "--vision-only",
+        action="store_true",
+        help="Only run the vision (OCR) step and skip LLM extraction",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -117,7 +125,14 @@ def main() -> None:
         datefmt="%H:%M:%S",
     )
 
-    _preflight(args.ollama_host, args.ollama_model)
+    if args.vision_only:
+        if not args.save_text:
+             args.save_text = Path("transcript.txt")
+             print(f"Vision-only mode: output will be saved to {args.save_text}")
+    else:
+        if not args.schema or not args.out_xlsx:
+            parser.error("schema and out_xlsx are required unless --vision-only is used")
+        _preflight(args.ollama_host, args.ollama_model)
 
     pipeline.run(
         input_folder=args.input_folder,
@@ -126,6 +141,7 @@ def main() -> None:
         ollama_host=args.ollama_host,
         ollama_model=args.ollama_model,
         save_text=args.save_text,
+        vision_only=args.vision_only,
     )
 
 

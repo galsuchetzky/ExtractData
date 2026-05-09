@@ -143,8 +143,9 @@ function Install-WingetPkg {
     Write-Info "Running: winget install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements --no-upgrade"
     # Some winget installs return 0x8A150039 (already installed but needs update) or similar.
     # 0x8A150030 and 0x8A150031 also mean already installed/cancelled.
-    winget install --id $Id --exact --silent --accept-package-agreements --accept-source-agreements --no-upgrade
-    $exitCode = $LASTEXITCODE
+	# Add --source winget to bypass the msstore certificate error
+	winget install --id $Id --source winget --exact --silent --accept-package-agreements --accept-source-agreements --no-upgrade
+	$exitCode = $LASTEXITCODE
     
     # If winget returns a non-zero code (even "already installed"), 
     # but our probe STILL fails, we must --force it.

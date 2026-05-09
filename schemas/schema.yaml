@@ -1,0 +1,111 @@
+version: 1
+category: "Demographics and Environmental Exposures"
+
+fields:
+  # --- Basic Demographics ---
+  - name: gender
+    type: enum
+    options: ["Male", "Female", "Other", "Unknown", "NA"]
+    hebrew_aliases: ["מין", "מגדר"]
+    default: "NA"
+
+  - name: birth_date
+    type: date
+    format: "YYYY-MM-DD"
+    hebrew_aliases: ["תאריך לידה"]
+    default: "NA"
+
+  - name: age
+    type: integer
+    description: "Age at time of visit/data entry"
+    validation: { min: 0, max: 120 }
+    default: "NA"
+
+  - name: country_of_birth
+    type: string
+    hebrew_aliases: ["ארץ לידה"]
+    default: "NA"
+
+  - name: year_of_aliyah
+    type: integer
+    description: "Year of immigration to Israel"
+    validation: { min: 1900, max: 2026 }
+    default: "NA"
+
+  # --- Geography ---
+  - name: city_of_residence
+    type: string
+    hebrew_aliases: ["עיר מגורים"]
+    default: "NA"
+
+  - name: residence_class
+    type: enum
+    description: "Urban or Rural, marked U and R in the document"
+    options: ["U", "R"] # Need your specific list
+    hebrew_aliases: ["סוג יישוב"]
+    default: "R"
+
+  - name: district
+    type: string
+    description: "Administrative district (e.g., Tel Aviv, Central, North)"
+    default: "NA"
+
+  - name: ethnicity
+    type: enum
+    options: ["Ashkenazi", "Sephardic", "Arab", "Ethiopian", "Other", "NA"] # Standardized clinical list?
+    hebrew_aliases: ["מוצא", "עדה"]
+    default: "NA"
+
+  # --- Occupation & Risk ---
+  - name: occupation
+    type: string
+    description: "Specific job title (e.g., Carpenter, Office Manager)"
+    default: "NA"
+
+  - name: occupation_category
+    type: enum
+    options: ["Manual", "Office", "Healthcare", "Retired", "Unemployed", "NA"] # Need your specific list
+    hebrew_aliases: ["קטגוריית תעסוקה"]
+    default: "NA"
+
+  - name: occupational_exposures
+    type: list_of_strings
+    description: "Known toxins or materials (e.g., Silica, Asbestos, Birds)"
+    default: "NA"
+
+  - name: environmental_exposures_chp
+    type: string
+    description: "Includes Chronic Hypersensitivity Pneumonitis triggers like mold or down feathers"
+    default: "NA"
+
+  # --- Smoking History ---
+  - name: smoking_status
+    type: enum
+    options: ["Never", "Former", "Current", "NA"]
+    hebrew_aliases: ["סטטוס עישון"]
+    default: "NA"
+
+  - name: year_stopped_smoking
+    type: integer
+    nullable: true
+    default: "NA"
+
+  - name: smoking_duration_years
+    type: integer
+    description: "Total number of years the patient smoked"
+    default: "NA"
+
+  - name: daily_cigarettes
+    type: integer
+    description: "Average number of cigarettes per day"
+    default: "NA"
+
+  - name: pack_years
+    type: float
+    description: "Calculated: (Cigarettes per day / 20) * Years of smoking"
+    default: "NA"
+
+  - name: passive_smoking
+    type: boolean
+    hebrew_aliases: ["עישון פסיבי"]
+    default: "NA"

@@ -7,58 +7,69 @@ fields:
     type: string
     description: Full name of the patient as written.
     hebrew_aliases: ["שם המטופל", "שם החולה", "שם"]
+    default: "NA"
 
   - name: patient_id
     type: string
     description: National ID / clinic patient identifier.
     hebrew_aliases: ["ת.ז.", "תעודת זהות", "מספר מטופל"]
+    default: "NA"
 
   - name: date_of_birth
     type: string
     description: Date of birth as written (no normalization).
     hebrew_aliases: ["תאריך לידה"]
+    default: "NA"
 
   - name: visit_date
     type: string
     description: Date of the visit/encounter as written.
     hebrew_aliases: ["תאריך ביקור", "תאריך"]
+    default: "NA"
 
   - name: doctor_name
     type: string
     description: Name of the treating physician.
     hebrew_aliases: ["שם הרופא", "רופא מטפל"]
+    default: "NA"
 
   - name: clinic
     type: string
     description: Clinic, hospital, or HMO name.
     hebrew_aliases: ["מרפאה", "קופת חולים"]
+    default: "NA"
 
   # --- Clinical content ---
   - name: chief_complaint
     type: string
     description: Reason for visit / presenting complaint, free text.
     hebrew_aliases: ["סיבת הפנייה", "תלונה עיקרית"]
+    default: "NA"
 
   - name: diagnosis
     type: list_of_strings
     description: One string per distinct diagnosis.
     hebrew_aliases: ["אבחנה", "אבחנות"]
+    default: "NA"
 
   - name: symptoms
     type: list_of_strings
     description: One string per symptom mentioned.
     hebrew_aliases: ["סימפטומים", "תסמינים"]
+    default: "NA"
 
   - name: medical_history_summary
     type: string
     description: Free-text summary of the patient's relevant medical history.
     hebrew_aliases: ["רקע רפואי", "היסטוריה רפואית"]
+    default: "NA"
 
   # --- Treatment ---
   - name: medications
     type: list_of_objects
     description: Drugs prescribed or in use; one object per drug.
     hebrew_aliases: ["תרופות"]
+    default: "NA"
     item_schema:
       name: string
       dose: string
@@ -68,18 +79,21 @@ fields:
     type: list_of_strings
     description: Procedures or treatments performed/recommended.
     hebrew_aliases: ["פרוצדורות", "טיפולים"]
+    default: "NA"
 
   - name: referrals
     type: list_of_strings
     description: Referrals issued to specialists or for tests.
     hebrew_aliases: ["הפניות"]
+    default: "NA"
 
   # --- Targeted screening question ---
   - name: exposed_to_pigeons
     type: enum
-    values: ["yes", "no", "unknown"]
+    values: ["yes", "no", "unknown", "NA"]
     description: |
       Was the patient exposed to pigeons or birds? Look for explicit mentions
       of pigeons, doves, birds, coops, or bird-exposure history. If not
-      mentioned at all, return "unknown".
+      mentioned at all, return "NA".
     hebrew_aliases: ["יונים", "ציפורים", "חשיפה ליונים", "חשיפה לציפורים"]
+    default: "NA"

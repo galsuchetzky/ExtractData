@@ -26,16 +26,23 @@ def _list_images(folder: Path) -> list[Path]:
 
 def run(
     input_folder: Path,
-    schema_path: Path,
-    out_xlsx: Path,
+    schema_path: Path | None,
+    out_xlsx: Path | None,
     ollama_host: str,
     ollama_model: str,
     save_text: Path | None = None,
+    vision_only: bool = False,
 ) -> None:
     if not input_folder.is_dir():
         raise FileNotFoundError(f"Input folder not found: {input_folder}")
-    schema = load_schema(schema_path)
-    log.info("Schema loaded: %d fields from %s", len(schema.fields), schema_path)
+
+    if not vision_only:
+        if schema_path is None:
+            raise ValueError("schema_path is required when not in vision-only mode")
+        if out_xlsx is None:
+            raise ValueError("out_xlsx is required when not in vision-only mode")
+        schema = load_schema(schema_path)
+        log.info("Schema loaded: %d fields from %s", len(schema.fields), schema_path)
 
     images = _list_images(input_folder)
     if not images:
@@ -72,6 +79,10 @@ def run(
         save_text.parent.mkdir(parents=True, exist_ok=True)
         save_text.write_text(full_text, encoding="utf-8")
         log.info("Saved concatenated transcript to %s", save_text)
+
+    if vision_only:
+        log.info("Vision-only mode: skipping structured extraction.")
+        return
 
     t0 = time.monotonic()
     row, err = extract_struct.extract_fields(full_text, schema, ollama_host, ollama_model)

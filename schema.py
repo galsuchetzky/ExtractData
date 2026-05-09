@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-SCALAR_TYPES = {"string", "integer", "number", "boolean", "enum"}
+SCALAR_TYPES = {"string", "integer", "number", "boolean", "enum", "date", "float"}
 LIST_TYPES = {"list_of_strings", "list_of_objects"}
 ALL_TYPES = SCALAR_TYPES | LIST_TYPES
 
@@ -20,6 +20,7 @@ class Field:
     hebrew_aliases: list[str] = field(default_factory=list)
     values: list[str] = field(default_factory=list)
     item_schema: dict[str, str] = field(default_factory=dict)
+    default: Any = None
 
 
 @dataclass
@@ -50,7 +51,10 @@ class Schema:
     def empty_row(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         for f in self.fields:
-            out[f.name] = [] if f.type in LIST_TYPES else None
+            if f.default is not None:
+                out[f.name] = f.default
+            else:
+                out[f.name] = [] if f.type in LIST_TYPES else None
         return out
 
     def json_schema(self) -> dict[str, Any]:
@@ -65,6 +69,8 @@ class Schema:
             "integer": {"type": ["integer", "null"]},
             "number": {"type": ["number", "null"]},
             "boolean": {"type": ["boolean", "null"]},
+            "date": {"type": ["string", "null"]},
+            "float": {"type": ["number", "null"]},
         }
         properties: dict[str, Any] = {}
         for f in self.fields:
@@ -125,8 +131,9 @@ def load_schema(path: Path) -> Schema:
                 type=ftype,
                 description=entry.get("description", "") or "",
                 hebrew_aliases=list(entry.get("hebrew_aliases") or []),
-                values=list(entry.get("values") or []),
+                values=list(entry.get("values") or entry.get("options") or []),
                 item_schema=dict(entry.get("item_schema") or {}),
+                default=entry.get("default"),
             )
         )
     return Schema(
