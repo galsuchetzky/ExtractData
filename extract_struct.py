@@ -28,7 +28,7 @@ from schema import LIST_TYPES, Field, Schema
 
 log = logging.getLogger(__name__)
 
-MODEL = "gemma4:latest"
+# MODEL = "gemma4:latest" (now passed as argument)
 TIMEOUT = 600
 
 
@@ -138,9 +138,9 @@ def _build_prompt(field: Field, transcript: str) -> str:
 
 # ------------------------------------------------------------------- HTTP / parse
 
-def _call(host: str, prompt: str, json_schema: dict[str, Any]) -> str:
+def _call(host: str, model: str, prompt: str, json_schema: dict[str, Any]) -> str:
     payload = {
-        "model": MODEL,
+        "model": model,
         "prompt": prompt,
         "stream": False,
         "format": json_schema,
@@ -177,11 +177,11 @@ def _default_for(field: Field) -> Any:
 # ----------------------------------------------------------------- per-field call
 
 def _extract_one(
-    transcript: str, field: Field, host: str
+    transcript: str, field: Field, host: str, model: str
 ) -> tuple[Any, str | None]:
     schema = _envelope_schema(field)
     prompt = _build_prompt(field, transcript)
-    raw = _call(host, prompt, schema)
+    raw = _call(host, model, prompt, schema)
     parsed = _try_parse(raw)
     if not parsed or "value" not in parsed:
         return _default_for(field), f"unparseable response: {raw[:200]!r}"
@@ -191,12 +191,12 @@ def _extract_one(
 # ---------------------------------------------------------------------- public API
 
 def extract_fields(
-    transcript: str, schema: Schema, host: str
+    transcript: str, schema: Schema, host: str, model: str
 ) -> tuple[dict[str, Any], str | None]:
     """One LLM call per schema field; assemble the result row."""
     log.info(
         "Per-field structured extraction: model=%s, fields=%d, transcript_chars=%d",
-        MODEL,
+        model,
         len(schema.fields),
         len(transcript),
     )
@@ -207,7 +207,7 @@ def extract_fields(
     for field in schema.fields:
         t0 = time.monotonic()
         try:
-            value, err = _extract_one(transcript, field, host)
+            value, err = _extract_one(transcript, field, host, model)
         except Exception as exc:  # noqa: BLE001
             log.error("  [%s] FAILED: %s", field.name, exc)
             errors.append(f"{field.name}: {exc}")

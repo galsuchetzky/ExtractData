@@ -29,6 +29,7 @@ def run(
     schema_path: Path,
     out_xlsx: Path,
     ollama_host: str,
+    ollama_model: str,
     save_text: Path | None = None,
 ) -> None:
     if not input_folder.is_dir():
@@ -73,7 +74,7 @@ def run(
         log.info("Saved concatenated transcript to %s", save_text)
 
     t0 = time.monotonic()
-    row, err = extract_struct.extract_fields(full_text, schema, ollama_host)
+    row, err = extract_struct.extract_fields(full_text, schema, ollama_host, ollama_model)
     struct_dt = time.monotonic() - t0
     log.info("Structured extraction done in %.1fs", struct_dt)
 

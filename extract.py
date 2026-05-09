@@ -13,15 +13,51 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import requests
+import yaml
 
 import pipeline
 
-REQUIRED_MODELS = ("gemma4:latest",)  # vision is now Tesseract (no Ollama model)
+# Defaults that can be overridden by config.yaml or CLI args
+DEFAULT_MODEL = "gemma4:latest"
+DEFAULT_HOST = "http://localhost:11434"
+
+def load_config() -> dict[str, Any]:
+    config_path = Path(__file__).parent / "config.yaml"
+    if not config_path.exists():
+        return {}
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception as exc:
+        print(f"Warning: Failed to load config.yaml: {exc}")
+        return {}
+
+def get_config_val(config: dict[str, Any], key: str, default: Any) -> Any:
+    # Check environment variable first (e.g. OLLAMA_MODEL)
+    env_val = os.environ.get(f"OLLAMA_{key.upper()}")
+    if env_val:
+        val = env_val
+    else:
+        # Then check config file
+        val = config.get("ollama", {}).get(key, default)
+    
+    # Special handling for 'host': ensure scheme and port, and fix 0.0.0.0 on Windows
+    if key == "host" and val:
+        if val == "0.0.0.0":
+            val = "localhost"
+        if not val.startswith("http"):
+            val = f"http://{val}"
+        if ":" not in val.split("//")[-1]:
+            val = f"{val}:11434"
+        # Final safety check for 0.0.0.0 inside a URL
+        val = val.replace("//0.0.0.0", "//localhost")
+    return val
 
 
-def _preflight(host: str) -> None:
+def _preflight(host: str, model: str) -> None:
     try:
         resp = requests.get(f"{host.rstrip('/')}/api/tags", timeout=5)
         resp.raise_for_status()
@@ -32,10 +68,8 @@ def _preflight(host: str) -> None:
             "  Windows: launch the Ollama app from the Start menu.\n"
         )
     names = {m.get("name") for m in resp.json().get("models", [])}
-    missing = [m for m in REQUIRED_MODELS if m not in names]
-    if missing:
-        hint = "\n".join(f"  ollama pull {m}" for m in missing)
-        sys.exit(f"ERROR: Missing Ollama models: {', '.join(missing)}\n{hint}")
+    if model not in names:
+        sys.exit(f"ERROR: Missing Ollama model: {model}\n  Run: ollama pull {model}")
 
 
 def main() -> None:
@@ -54,10 +88,17 @@ def main() -> None:
     parser.add_argument(
         "out_xlsx", type=Path, help="Output .xlsx path (will be overwritten)"
     )
+    config = load_config()
+
     parser.add_argument(
         "--ollama-host",
-        default=os.environ.get("OLLAMA_HOST", "http://localhost:11434"),
+        default=get_config_val(config, "host", DEFAULT_HOST),
         help="Ollama base URL (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        default=get_config_val(config, "model", DEFAULT_MODEL),
+        help="Ollama model name (default: %(default)s)",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable DEBUG logging"
@@ -76,13 +117,14 @@ def main() -> None:
         datefmt="%H:%M:%S",
     )
 
-    _preflight(args.ollama_host)
+    _preflight(args.ollama_host, args.ollama_model)
 
     pipeline.run(
         input_folder=args.input_folder,
         schema_path=args.schema,
         out_xlsx=args.out_xlsx,
         ollama_host=args.ollama_host,
+        ollama_model=args.ollama_model,
         save_text=args.save_text,
     )
 

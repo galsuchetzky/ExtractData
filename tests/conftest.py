@@ -29,21 +29,40 @@ def pytest_configure(config: pytest.Config) -> None:
 
 @pytest.fixture(scope="session")
 def ollama_host() -> str:
-    return os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    val = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    if val == "0.0.0.0":
+        val = "localhost"
+    if not val.startswith("http"):
+        val = f"http://{val}"
+    if ":" not in val.split("//")[-1]:
+        val = f"{val}:11434"
+    return val.replace("//0.0.0.0", "//localhost")
 
 
 @pytest.fixture(scope="session")
-def require_ollama(ollama_host: str) -> str:
+def ollama_model() -> str:
+    # Try to load from config.yaml
+    model = "gemma4:latest"
+    config_path = ROOT / "config.yaml"
+    if config_path.exists():
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+                model = config.get("ollama", {}).get("model", model)
+        except Exception: pass
+    return os.environ.get("OLLAMA_MODEL", model)
+
+
+@pytest.fixture(scope="session")
+def require_ollama(ollama_host: str, ollama_model: str) -> str:
     try:
         resp = requests.get(f"{ollama_host.rstrip('/')}/api/tags", timeout=3)
         resp.raise_for_status()
     except requests.RequestException as exc:
         pytest.skip(f"Ollama not reachable at {ollama_host}: {exc}")
     names = {m.get("name") for m in resp.json().get("models", [])}
-    required = {"gemma4:latest"}  # vision is Tesseract on this branch
-    missing = required - names
-    if missing:
-        pytest.skip(f"Missing Ollama models: {', '.join(sorted(missing))}")
+    if ollama_model not in names:
+        pytest.skip(f"Missing Ollama model: {ollama_model}")
     return ollama_host
 
 
@@ -65,6 +84,7 @@ def _list_fixture_paths() -> list[Path]:
 @pytest.fixture(scope="session")
 def pipeline_outputs(
     require_ollama: str,
+    ollama_model: str,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> dict[str, dict[str, Any]]:
     """Run the full pipeline once per fixture; cache row + transcript + expected.
@@ -89,6 +109,7 @@ def pipeline_outputs(
             schema_path=schema_path,
             out_xlsx=out_xlsx,
             ollama_host=require_ollama,
+            ollama_model=ollama_model,
             save_text=transcript_path,
         )
         wb = load_workbook(out_xlsx)

@@ -28,49 +28,65 @@ PASSES = ("heb", "eng")  # two passes: each is clean for its own script
 
 
 def _ensure_tesseract() -> None:
-    if shutil.which(TESSERACT_BIN) is None:
-        raise RuntimeError(
-            "tesseract not found on PATH. Install with `brew install tesseract "
-            "tesseract-lang` (macOS) or `apt install tesseract-ocr "
-            "tesseract-ocr-heb` (Debian/Ubuntu)."
-        )
+    global TESSERACT_BIN
+    if shutil.which(TESSERACT_BIN) is not None:
+        return
+
+    # Windows registry fallback
+    import platform
+    if platform.system() == "Windows":
+        try:
+            import winreg
+            key_path = r"SOFTWARE\Tesseract-OCR"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+                install_dir, _ = winreg.QueryValueEx(key, "InstallDir")
+                if install_dir:
+                    candidate = Path(install_dir) / "tesseract.exe"
+                    if candidate.exists():
+                        TESSERACT_BIN = str(candidate)
+                        return
+        except (ImportError, OSError):
+            pass
+
+    raise RuntimeError(
+        "tesseract not found on PATH or in registry. \n"
+        "Windows: Install from https://github.com/UB-Mannheim/tesseract/wiki\n"
+        "macOS:   `brew install tesseract tesseract-lang` \n"
+        "Linux:   `apt install tesseract-ocr tesseract-ocr-heb`"
+    )
 
 
 def _run(path: Path, lang: str) -> str:
-    result = subprocess.run(
-        [TESSERACT_BIN, str(path), "-", "-l", lang],
-        capture_output=True,
-        text=True,
-        timeout=TIMEOUT,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"tesseract failed for {path.name} (lang={lang}, "
-            f"rc={result.returncode}): {result.stderr.strip()[:300]}"
+    """Run Tesseract, writing output to a temp file to avoid Windows console pipe encoding corruption."""
+    import tempfile, os
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_base = os.path.join(tmpdir, "out")
+        result = subprocess.run(
+            [TESSERACT_BIN, str(path), out_base, "-l", lang],
+            capture_output=True,
+            timeout=TIMEOUT,
+            check=False,
         )
-    return result.stdout.strip()
+        if result.returncode != 0:
+            err = result.stderr.decode("utf-8", errors="replace").strip()
+            raise RuntimeError(
+                f"tesseract failed for {path.name} (lang={lang}, "
+                f"rc={result.returncode}): {err[:300]}"
+            )
+        out_txt = out_base + ".txt"
+        if not os.path.exists(out_txt):
+            raise RuntimeError(f"Tesseract produced no output file for {path.name}")
+        with open(out_txt, encoding="utf-8") as f:
+            return f.read().strip()
 
 
 def transcribe_image(path: Path, host: str) -> str:  # `host` kept for compat
-    """Run Tesseract twice (Hebrew-only, then English-only) and concatenate.
+    """Run Tesseract with mixed Hebrew+English support.
 
-    A single `-l heb+eng` pass produces BiDi-mushed output on lines that mix
-    scripts (numbers, English labels, and Hebrew labels jumbled together with
-    invisible direction marks). Two separate passes give us, for each line:
-    a clean Hebrew rendering with English garbled, and a clean English
-    rendering with Hebrew garbled. The downstream LLM picks whichever is
-    correct per field. Total cost: ~0.4-0.8s per page (still ≪1s).
+    Running separate passes often confuses the downstream LLM because the
+    English pass produces gibberish shapes for Hebrew letters. A single
+    combined pass allows Tesseract 5's LSTM to handle mixed scripts better.
     """
     _ensure_tesseract()
     log.debug("Tesseract OCR: %s (%d bytes)", path.name, path.stat().st_size)
-    chunks: list[str] = []
-    for lang in PASSES:
-        text = _run(path, lang)
-        if text:
-            chunks.append(f"--- pass: {lang} ---\n{text}")
-    if not chunks:
-        raise RuntimeError(f"Empty Tesseract output for {path.name}")
-    out = "\n\n".join(chunks)
-    log.debug("  -> %d chars across %d passes", len(out), len(chunks))
-    return out
+    return _run(path, "heb+eng")
